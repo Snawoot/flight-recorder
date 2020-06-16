@@ -8,6 +8,9 @@ import time
 import enum
 import os
 import os.path
+import itertools
+import collections
+from datetime import datetime
 
 QUERY = """
 SELECT id,
@@ -25,9 +28,12 @@ ORDER BY ts
 MINUS_INF = float("-inf")
 PLUS_INF = float("+inf")
 
+Range = collections.namedtuple('Range', ('id', 'begin', 'end'))
+
 class Event(enum.Enum):
     DOWNTIME = 0
     FLIGHT = 1
+    UPTIME = 2
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -39,6 +45,9 @@ def parse_args():
                         help="database path",
                         default=def_db_path)
     return parser.parse_args()
+
+def ts2str(ts):
+    return "-INF" if ts == MINUS_INF else datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 
 def gen_ranges(conn):
     cur = conn.cursor()
@@ -52,19 +61,40 @@ def gen_ranges(conn):
             if is_open:
                 if not open_ranges:
                     # Gap detected - yield DOWNTIME
-                    yield Event.DOWNTIME, (downtime_id, last_uptime, ts)
+                    yield Event.DOWNTIME, Range(downtime_id, last_uptime, ts)
                     downtime_id += 1
                 open_ranges[flight_id] = ts
             else:
-                yield Event.FLIGHT, (flight_id, open_ranges[flight_id], ts)
+                yield Event.FLIGHT, Range(flight_id, open_ranges[flight_id], ts)
                 open_ranges.pop(flight_id)
                 last_uptime = ts
     finally:
         cur.close()
 
+def aggregate_uptimes(source):
+    uptime_id = 1
+    for k, g in itertools.groupby(source, key=lambda v: v[0]):
+        if k is Event.FLIGHT:
+            flights = list(g)
+            uptime_begin = min(flights, key=lambda v: v[1].begin)[1].begin
+            uptime_end = max(flights, key=lambda v: v[1].end)[1].end
+            yield Event.UPTIME, Range(uptime_id, uptime_begin, uptime_end)
+            uptime_id += 1
+            for elem in flights:
+                yield elem
+        else:
+            for elem in g:
+                yield elem
+
 def report(conn):
-    for x in gen_ranges(conn):
-        print(x)
+    for evt, info in aggregate_uptimes(gen_ranges(conn)):
+        if evt is Event.UPTIME:
+            print()
+        print("%s%s #%d: %s => %s" % ("\t" if evt is Event.FLIGHT else "",
+                                      evt.name,
+                                      info.id,
+                                      ts2str(info.begin),
+                                      ts2str(info.end)))
 
 def main():
     args = parse_args()
