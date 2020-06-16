@@ -10,7 +10,7 @@ import os
 import os.path
 import itertools
 import collections
-from datetime import datetime
+from datetime import datetime, timedelta
 
 QUERY = """
 SELECT id,
@@ -48,6 +48,9 @@ def parse_args():
 
 def ts2str(ts):
     return "-INF" if ts == MINUS_INF else datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
+def td2str(td):
+    return "INF" if td == PLUS_INF else str(timedelta(seconds=td))
 
 def gen_ranges(conn):
     cur = conn.cursor()
@@ -90,11 +93,12 @@ def report(conn):
     for evt, info in aggregate_uptimes(gen_ranges(conn)):
         if evt is Event.UPTIME:
             print()
-        print("%s%s #%d: %s => %s" % ("\t" if evt is Event.FLIGHT else "",
-                                      evt.name,
-                                      info.id,
-                                      ts2str(info.begin),
-                                      ts2str(info.end)))
+        print("%s%s #%d: %s => %s (%s)" % ("\t" if evt is Event.FLIGHT else "",
+                                           evt.name,
+                                           info.id,
+                                           ts2str(info.begin),
+                                           ts2str(info.end),
+                                           td2str(info.end - info.begin)))
 
 def main():
     args = parse_args()
