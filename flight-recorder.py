@@ -16,8 +16,10 @@ DB_INIT = [
     "id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
     "duration REAL NOT NULL,\n"
     "last_ts REAL NOT NULL)",
-    "CREATE INDEX IF NOT EXISTS idx_flight_updated\n"
+    "CREATE INDEX IF NOT EXISTS idx_flight_last_ts\n"
     "ON flight (last_ts)\n",
+    "CREATE INDEX IF NOT EXISTS idx_flight_begin\n"
+    "ON flight (last_ts - duration)\n",
 ]
 
 def setup_logger(name, verbosity, logfile=None):
