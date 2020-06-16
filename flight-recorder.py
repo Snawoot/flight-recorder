@@ -14,7 +14,7 @@ DB_INIT = [
     "PRAGMA synchronous=NORMAL",
     "CREATE TABLE IF NOT EXISTS flight (\n"
     "id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
-    "duration REAL NOT NULL,\n"
+    "duration REAL NOT NULL CONSTRAINT positive_duration CHECK (duration >= 0),\n"
     "last_ts REAL NOT NULL)",
     "CREATE INDEX IF NOT EXISTS idx_flight_last_ts\n"
     "ON flight (last_ts)\n",
@@ -78,7 +78,7 @@ def parse_args():
         return fvalue
 
     parser = argparse.ArgumentParser(
-        description="Fetches free proxy list via Hola browser extension API",
+        description="Tracks system crashes and downtime duration",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     flight_group = parser.add_argument_group("flight options")
     flight_group.add_argument("-i", "--interval",
