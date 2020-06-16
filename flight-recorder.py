@@ -7,6 +7,7 @@ import time
 import enum
 import os
 import os.path
+import signal
 
 DB_INIT = [
     "PRAGMA journal_mode=WAL",
@@ -157,9 +158,13 @@ class Recorder:
             self._update_flight()
         finally:
             self._cur.close()
-            self._logger.info("Flight record closed.")
+            self._logger.info("Flight record #%d closed.", self._flight_id)
+
+def sig_handler(signum, frame):
+    raise KeyboardInterrupt
 
 def main():
+    signal.signal(signal.SIGTERM, sig_handler)
     args = parse_args()
     logger = setup_logger("MAIN", args.verbosity, args.log)
     setup_logger("RECORDER", args.verbosity, args.log)
