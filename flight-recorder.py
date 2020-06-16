@@ -13,10 +13,10 @@ DB_INIT = [
     "PRAGMA synchronous=NORMAL",
     "CREATE TABLE IF NOT EXISTS flight (\n"
     "id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
-    "interval REAL NOT NULL,\n"
-    "updated REAL NOT NULL)",
+    "duration REAL NOT NULL,\n"
+    "last_ts REAL NOT NULL)",
     "CREATE INDEX IF NOT EXISTS idx_flight_updated\n"
-    "ON flight (updated)\n",
+    "ON flight (last_ts)\n",
 ]
 
 def setup_logger(name, verbosity, logfile=None):
@@ -107,41 +107,77 @@ def ensure_db(db_path):
     cur.close()
     return conn
 
-def recorder(args):
-    logger = logging.getLogger("RECORDER")
-    try:
-        conn = ensure_db(args.database)
-    except Exception as exc:
-        logger.critical("DB connection failed: %s", str(exc))
-        return
-    cur = conn.cursor()
+class Recorder:
+    def __init__(self, conn, interval=10.):
+        self._conn = conn
+        self._interval = interval
+        self._logger = logging.getLogger("RECORDER")
+        self._flight_id = None
+        self._started_mono = None
+        self._cur = None
 
-    try:
+    def _create_flight(self):
         ts = time.time()
+        with self._conn:
+            self._cur.execute("INSERT INTO flight (duration, last_ts) VALUES (?,?)",
+                              (time.monotonic() - self._started_mono, ts))
+        self._flight_id = self._cur.lastrowid
+        self._logger.info("Opened flight record #%d: ts=%.3f", self._flight_id, ts)
+
+    def _update_flight(self):
+        ts = time.time()
+        new_duration = time.monotonic() - self._started_mono
+        with self._conn:
+            self._cur.execute("UPDATE flight SET duration = ?, last_ts = ? WHERE id = ?",
+                              (new_duration, ts, self._flight_id))
+        self._logger.info("Updated flight record #%d: duration=%.3f ts=%.3f",
+                          self._flight_id, new_duration, ts)
+
+    def run(self):
+        self._started_mono = time.monotonic()
+        self._cur = self._conn.cursor()
+    
         try:
-            cur.execute("INSERT INTO flight (interval, updated) VALUES (?,?)",
-                        (args.interval, ts))
+            self._create_flight()
         except Exception as exc:
-            logger.critical("Unable to create flight record: %s", str(exc))
+            self._logger.critical("Unable to create flight record: %s", str(exc))
+            self._cur.close()
             return
-        flight_id = cur.lastrowid
-        logger.info("Opened flight record id=%d, interval=%.3f, ts=%.3f",
-                    flight_id, args.interval, ts)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        cur.close()
-        conn.close()
-        logger.info("Flight record closed.")
+    
+        try:
+            while True:
+                time.sleep(self._interval)
+                try:
+                    self._update_flight()
+                except KeyboardInterrupt:
+                    raise
+                except Exception as exc:
+                    self._logger.error("DB update failed: %s", str(exc))
+        except KeyboardInterrupt:
+            self._update_flight()
+        finally:
+            self._cur.close()
+            self._logger.info("Flight record closed.")
 
 def main():
     args = parse_args()
     logger = setup_logger("MAIN", args.verbosity, args.log)
     setup_logger("RECORDER", args.verbosity, args.log)
-    logger.info("Starting flight recorder...")
+
     try:
-        recorder(args)
+        conn = ensure_db(args.database)
+    except Exception as exc:
+        logger.critical("DB connection failed: %s", str(exc))
+        return
+
+    logger.info("Starting flight recorder...")
+    recorder = Recorder(conn, args.interval)
+    try:
+        recorder.run()
+    except KeyboardInterrupt:
+        pass
     finally:
+        conn.close()
         logger.info("Flight recorder shut down.")
 
 if __name__ == '__main__':
