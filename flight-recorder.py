@@ -11,7 +11,10 @@ import os.path
 DB_INIT = [
     "PRAGMA journal_mode=WAL",
     "PRAGMA synchronous=NORMAL",
-    "CREATE TABLE IF NOT EXISTS flight (id BLOB PRIMARY KEY, interval REAL, updated REAL)",
+    "CREATE TABLE IF NOT EXISTS flight (\n"
+    "id INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+    "interval REAL NOT NULL,\n"
+    "updated REAL NOT NULL)",
     "CREATE INDEX IF NOT EXISTS idx_flight_updated\n"
     "ON flight (updated)\n",
 ]
@@ -105,7 +108,31 @@ def ensure_db(db_path):
     return conn
 
 def recorder(args):
-    db = ensure_db(args.database)
+    logger = logging.getLogger("RECORDER")
+    try:
+        conn = ensure_db(args.database)
+    except Exception as exc:
+        logger.critical("DB connection failed: %s", str(exc))
+        return
+    cur = conn.cursor()
+
+    try:
+        ts = time.time()
+        try:
+            cur.execute("INSERT INTO flight (interval, updated) VALUES (?,?)",
+                        (args.interval, ts))
+        except Exception as exc:
+            logger.critical("Unable to create flight record: %s", str(exc))
+            return
+        flight_id = cur.lastrowid
+        logger.info("Opened flight record id=%d, interval=%.3f, ts=%.3f",
+                    flight_id, args.interval, ts)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        cur.close()
+        conn.close()
+        logger.info("Flight record closed.")
 
 def main():
     args = parse_args()
