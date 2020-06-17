@@ -15,6 +15,26 @@ Python 3.5+
 
 Place scripts somewhere and just run them as you like.
 
+Example (run as root):
+
+```sh
+git clone https://github.com/Snawoot/flight-recorder.git && \
+cd flight-recorder && \
+install flight-recorder flight-reports /usr/local/bin && \
+useradd -r -s /usr/sbin/nologin -m -d /var/lib/flight-recorder flight-recorder && \
+install -m 0644 flight-recorder.service /etc/systemd/system && \
+systemctl daemon-reload && \
+systemctl enable flight-recorder.sevice && \
+systemctl start flight-recorder.service
+```
+
+Done, now you may see reports:
+
+```
+flight-reports -d /var/lib/flight-recorder/flight.db
+```
+
+
 ## Synopsis
 
 ```

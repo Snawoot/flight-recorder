@@ -1,0 +1,12 @@
+[Unit]
+Description=Daemon which tracks system crashes and downtime duration
+
+[Service]
+Type=simple
+User=flight-recorder
+ExecStart=/usr/local/bin/flight-recorder -d /var/lib/flight-recorder/flight.db
+Restart=always
+KillMode=process
+
+[Install]
+WantedBy=default.target
