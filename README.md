@@ -11,7 +11,7 @@ flight-recorder doesn't rely on any system-specific calls to get wall-clock time
 * Cross-platform (Linux/MacOS/Windows/\*BSD/whatever that can run Python)
 * Works well on devices without real-time clock (like Raspberry Pi and other mini-computers)
 * Common storage format (SQLite)
-* Doesn't hurts to device flash by rewriting same file blocks: SQLite storage backend works in WAL mode.
+* Doesn't hurts to device flash by rewriting same file blocks: SQLite storage backend operates in WAL mode.
 * Handles overlapped uptime tracks from multiple instances
 * Can be operated by unprivileged user (both daemon and report utility)
 
