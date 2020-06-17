@@ -21,6 +21,21 @@ Run `flight-recorder` in background on server startup and use `flight-reports` t
 
 Make sure database path used by `flight-recorder` matches path used by `flight-reports`.
 
+## Example output
+
+```
+$ flight-reports -d /var/lib/flight-recorder/flight.db
+DOWNTIME #1: -INF => 2020-06-17 03:05:05 (INF)
+
+UPTIME #1: 2020-06-17 03:05:05 => 2020-06-17 03:15:25 (0:10:20.586976)
+	FLIGHT #1: 2020-06-17 03:05:05 => 2020-06-17 03:15:25 (0:10:20.586976)
+DOWNTIME #2: 2020-06-17 03:15:25 => 2020-06-17 03:16:31 (0:01:05.631327)
+
+UPTIME #2: 2020-06-17 03:16:31 => 2020-06-17 04:55:17 (1:38:46.525753)
+	FLIGHT #2: 2020-06-17 03:16:31 => 2020-06-17 04:55:17 (1:38:46.525753)
+```
+
+
 ## Requirements
 
 Python 3.5+
