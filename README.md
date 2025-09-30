@@ -6,19 +6,6 @@ flight-recorder is a more portable replacement for [downtimed](https://github.co
 
 flight-recorder doesn't rely on any system-specific calls to get wall-clock time of system startup. Instead, each instance of flight-recorder generates unique ID of it's run (flight) and tracks it's duration with monotonic clock. Daemon keeps duration record updated in database (SQLite) and at the same time updates perceived wall-clock timestamp for it's flight ID. Once network will become available and system time is syncronized with NTP, flight record will eventually become grounded to actual wall-clock time with proper uptime boundaries. "Flights" may overlap if multiple instances of daemon are running at the same time.
 
----
-
-:heart: :heart: :heart:
-
-You can say thanks to the author by donations to these wallets:
-
-- ETH: `0xB71250010e8beC90C5f9ddF408251eBA9dD7320e`
-- BTC:
-  - Legacy: `1N89PRvG1CSsUk9sxKwBwudN6TjTPQ1N8a`
-  - Segwit: `bc1qc0hcyxc000qf0ketv4r44ld7dlgmmu73rtlntw`
-
----
-
 ## Features
 
 * Cross-platform (Linux/MacOS/Windows/\*BSD/whatever that can run Python)
